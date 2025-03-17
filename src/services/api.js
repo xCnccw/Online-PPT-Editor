@@ -1,11 +1,21 @@
 import axios from 'axios';
+const API_URL =
+  typeof import.meta !== "undefined" && import.meta.env.VITE_API_URL
+    ? import.meta.env.VITE_API_URL
+    : typeof window !== "undefined" && window.API_URL
+    ? window.API_URL
+    : "http://localhost:5005"; // 默认本地开发环境
+
+console.log("📌 API 连接地址:", API_URL);  // 🚀 打印 API 地址，检查是否正确
 
 const apiClient = axios.create({
-  baseURL: 'http://localhost:5005',  
+  baseURL: API_URL,
   headers: {
-    'Content-Type': 'application/json'
-  }
+    "Content-Type": "application/json",
+  },
 });
+
+export default apiClient;
 
 // register api
 export const registerUser = async (userData) => {
