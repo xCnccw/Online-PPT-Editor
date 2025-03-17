@@ -1,4 +1,5 @@
 import axios from 'axios';
+// const API_URL ="http://localhost:5005"; // 默认本地开发环境
 const API_URL =
   typeof import.meta !== "undefined" && import.meta.env.VITE_API_URL
     ? import.meta.env.VITE_API_URL
