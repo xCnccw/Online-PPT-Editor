@@ -14,6 +14,7 @@ const apiClient = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  withCredentials: true // ✅ 允许带 Cookie 或身份认证
 });
 
 export default apiClient;
@@ -21,7 +22,9 @@ export default apiClient;
 // register api
 export const registerUser = async (userData) => {
   try {
-    const response = await apiClient.post('/admin/auth/register', userData);
+    const response = await apiClient.post('/admin/auth/register', userData,{
+      withCredentials: true
+    });
     return response.data;  
   } catch (error) {
     console.error('Registration error:', error);
