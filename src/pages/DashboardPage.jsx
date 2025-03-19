@@ -95,6 +95,7 @@ export default function DashboardPage() {
             thumbnail: selectedImage,
             slides: [{ slideId: `slide-${Date.now()}`, order: 1, content: { elements: [] }, }],
             history: [],
+            shareWith: {}, // 初始化空的分享列表
             createdAt: Date.now()
         };
 

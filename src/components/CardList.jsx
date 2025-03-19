@@ -65,7 +65,10 @@ export default function CardList() {
                                     {item.title || ""}
                                 </p>
                                 <p className="text-tiny text-white/60 line-clamp-2 max-h-[3em] overflow-hidden">
-                                    {item.description || ""}
+                                {(item.ownerEmail && JSON.parse(localStorage.getItem('user'))?.email !== item.ownerEmail)
+                                        ? <span className="font-bold text-transparent text-inherit bg-clip-text bg-gradient-to-r from-green-400 to-emerald-600  sm:block">Shared by: {item.ownerEmail}</span>
+                                        : <span className="text-white/60">{item.description || ""}</span>
+                                    }
                                 </p>
                             </div>
                             <Button

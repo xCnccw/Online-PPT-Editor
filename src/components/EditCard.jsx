@@ -4,9 +4,9 @@ import { Icon } from "@iconify/react";
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'; // 
 import { useDisclosure, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Input, Image, Card, CardBody, CardFooter } from "@nextui-org/react";
-import { changePresentationTitle, removePresentation, changePresentationThumbnail, setSelectedKey, addSlideToPresentation, removeSlide, setRearrangeOpen, addElementToSlide, updateElementInSlide, updateBackgroundInSlide, setCurrentPresentationId } from '../store/presentationSlice';
+import { changePresentationTitle, removePresentation, changePresentationThumbnail, setSelectedKey, addSlideToPresentation, removeSlide, setRearrangeOpen, addElementToSlide, updateElementInSlide, updateBackgroundInSlide, setCurrentPresentationId,changeSharePPT } from '../store/presentationSlice';
 import { toast } from 'react-toastify';
-import { updatePresentationTitle, deletePresentationById, updatePresentationThumbnail, addSlideAPI, removeSlideAPI, addElement, updateElementAPI, updateBackgroundAPI } from "../services/api";
+import { updatePresentationTitle, deletePresentationById, updatePresentationThumbnail, addSlideAPI, removeSlideAPI, addElement, updateElementAPI, updateBackgroundAPI,updateSharePPT } from "../services/api";
 import { fileToBase64 } from '../utils/base64';
 import RearrangeSlidesModal from "./RearrangeSlidesModal.jsx";
 import { HTML5Backend } from "react-dnd-html5-backend";
@@ -131,6 +131,8 @@ export default function EditCard() {
             deletePresentation();
         } else if (modalContent?.type === "updateTitle") {
             updateTitle();
+        } else if (modalContent?.type === "sharePPT") {
+            sharePPT();
         }
     };
 
@@ -360,6 +362,28 @@ export default function EditCard() {
         });
         openSecondModal();
     };
+
+    const [shareUserEmail, setShareUserEmail] = useState("");
+    const openShareModal = () => {
+        setModalContent({
+            type: "sharePPT",
+            title: "Share PPT",
+            body: (
+                <Input
+                    autoFocus
+                    label="User Email"
+                    placeholder="New User Email"
+                    variant="bordered"
+                    onChange={(e) => setShareUserEmail(e.target.value)}
+                />
+            ),
+            confirmButtonLabel: "Confirm",
+            cancelButtonLabel: "Cancel"
+        });
+        openSecondModal();
+    };
+
+
     const updateTitle = async () => {
         try {
             const result = await updatePresentationTitle(presentationId, updatedTitle);
@@ -382,6 +406,25 @@ export default function EditCard() {
     const changeThumbnail = () => {
         openThirdModal()
     }
+
+    const sharePPT = async () => {
+        try {
+            const result = await updateSharePPT(presentationId, shareUserEmail);
+
+            if (result.success) {
+                dispatch(changeSharePPT({ presentationId, shareUserEmail: shareUserEmail }));
+
+                toast.success("Share PPT successfully!");
+                closeSecondModal();
+            } else {
+                throw result.error;
+            }
+        } catch (error) {
+            toast.error("Failed to share PPT");
+            console.error("Error share PPT:", error);
+        }
+    }
+
     const [selectedImage, setSelectedImage] = useState(null);
     const handleImageUpload = async (event) => {
         const file = event.target.files[0];
@@ -479,6 +522,8 @@ export default function EditCard() {
                 </Button>
                 <h2 className="mx-5 overflow-hidden text-xl font-semibold whitespace-nowrap text-ellipsis">{presentation ? presentation.title : ''}</h2>
                 <Button aria-label="edit-title-button" isIconOnly onClick={openEditTitleModal} variant="faded" startContent=<Icon className="text-default-600" icon="solar:pen-2-line-duotone" width={24} />>
+                </Button>
+                <Button aria-label="edit-title-button" isIconOnly onClick={openShareModal} variant="flat" color="success" startContent=<Icon className="text-default-600" icon="fluent:share-24-regular" width={24} />>
                 </Button>
 
 

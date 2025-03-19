@@ -36,6 +36,8 @@ export const registerUser = async (userData) => {
 export const loginUser = async (userData) => {
   try {
     const response = await apiClient.post('/admin/auth/login', userData);
+    localStorage.setItem('user', JSON.stringify({ email: userData.email }));
+    
     return response.data;
   } catch (error) {
     console.error('Login error:', error);
@@ -59,14 +61,36 @@ export const logoutUser = async (token) => {
 };
 
 // get data
+// export const getStore = async (token) => {
+//   try {
+//     const response = await apiClient.get('/store', {
+//       headers: {
+//         Authorization: `Bearer ${token}`,
+//       },
+//     });
+//     return response.data.store;
+//   } catch (error) {
+//     console.error('Error fetching store:', error);
+//     throw error;
+//   }
+// };
+
 export const getStore = async (token) => {
   try {
-    const response = await apiClient.get('/store', {
+    const response = await apiClient.get('/store/with-shared', {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
-    return response.data.store;
+    
+    const store = response.data.store;
+    const presentations = store.presentations || [];
+    const sharedPresentations = store.sharedPresentations || [];
+    
+    return {
+      ...store,
+      presentations: [...presentations, ...sharedPresentations]
+    };
   } catch (error) {
     console.error('Error fetching store:', error);
     throw error;
@@ -74,19 +98,110 @@ export const getStore = async (token) => {
 };
 
 // put data
+// export const putStore = async (storeData, token) => {
+//   try {
+//     const response = await apiClient.put('/store', { store: storeData }, {
+//       headers: {
+//         Authorization: `Bearer ${token}`,
+//       },
+//     });
+//     return response.data;
+//   } catch (error) {
+//     console.error('Error updating store:', error);
+//     throw error;
+//   }
+// };
+
+// 添加更新共享PPT的辅助函数
+const updateSharedPresentation = async (presentationId, presentation, token) => {
+  console.log('🔄 准备更新共享PPT:', { presentationId, presentation });
+  const response = await apiClient.put(`/store/shared/${presentationId}`, 
+    { presentation },
+    { headers: { Authorization: `Bearer ${token}` }}
+  );
+  console.log('✅ 共享PPT更新成功:', response.data);
+  return response.data;
+};
+
+// 修改 putStore 函数
+// 修改 putStore 函数
 export const putStore = async (storeData, token) => {
   try {
-    const response = await apiClient.put('/store', { store: storeData }, {
-      headers: {
-        Authorization: `Bearer ${token}`,
+    const currentUserEmail = JSON.parse(localStorage.getItem('user'))?.email;
+    const updatedPresentations = [...storeData.presentations];
+    
+    // 处理共享PPT的更新
+    for (let i = 0; i < updatedPresentations.length; i++) {
+      const presentation = updatedPresentations[i];
+      
+      console.log('📊 处理PPT:', {
+        id: presentation.presentationId,
+        owner: presentation.ownerEmail,
+        currentUser: currentUserEmail,
+        isShared: !!presentation.ownerEmail,
+        isNotOwner: presentation.ownerEmail !== currentUserEmail
+      });
+
+      // 只有非所有者且有ownerEmail的才走共享更新
+      if (presentation.ownerEmail && presentation.ownerEmail !== currentUserEmail) {
+        console.log('🔄 检测到共享PPT，准备更新');
+        try {
+          const result = await updateSharedPresentation(
+            presentation.presentationId,
+            presentation,
+            token
+          );
+          if (!result || !result.presentation) {
+            console.error('❌ 共享PPT更新返回数据无效');
+            throw new Error('Invalid response data');
+          }
+          updatedPresentations[i] = {
+            ...result.presentation,
+            ownerEmail: presentation.ownerEmail
+          };
+          console.log('✅ 共享PPT更新完成');
+        } catch (error) {
+          console.error('❌ 更新共享PPT失败:', error);
+          // 更新失败时保持原始数据
+          return {
+            success: false,
+            error: '共享PPT更新失败，请稍后重试'
+          };
+        }
+      } else {
+        console.log('⏩ 跳过非共享PPT更新');
+      }
+    }
+
+    // 更新store
+    console.log('📝 准备更新本地store');
+    const response = await apiClient.put('/store', 
+      { 
+        store: { 
+          ...storeData, 
+          presentations: updatedPresentations.filter(p => 
+            !p.ownerEmail || p.ownerEmail === currentUserEmail
+          )
+        } 
       },
-    });
-    return response.data;
+      { headers: { Authorization: `Bearer ${token}` }}
+    );
+    console.log('✅ 本地store更新成功');
+    
+    return {
+      ...response.data,
+      success: true
+    };
   } catch (error) {
-    console.error('Error updating store:', error);
-    throw error;
+    console.error('❌ Store更新失败:', error);
+    return {
+      success: false,
+      error: '更新失败，请稍后重试'
+    };
   }
 };
+
+
 
 // update title
 export const updatePresentationTitle = async (presentationId, updatedTitle) => {
@@ -107,6 +222,64 @@ export const updatePresentationTitle = async (presentationId, updatedTitle) => {
   } catch (error) {
     console.error("Failed to update presentation title:", error);
     return { success: false, error };
+  }
+};
+
+// 检查用户是否存在
+export const checkUserExists = async (email) => {
+  try {
+    const response = await apiClient.get(`/admin/auth/check-email/${email}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error checking user:', error);
+    throw error;
+  }
+};
+
+// Share PPT with another user
+export const updateSharePPT = async (presentationId, userEmail) => {
+  try {
+    const token = localStorage.getItem("token");
+    
+    // 检查用户存在性
+    const userCheck = await checkUserExists(userEmail);
+    if (!userCheck.exists) {
+      return { 
+        success: false, 
+        error: "该邮箱未注册，请确认后重试" 
+      };
+    }
+
+    const currentStore = await getStore(token);
+    const updatedStore = {
+      ...currentStore,
+      presentations: currentStore.presentations.map((p) =>
+        p.presentationId === presentationId
+          ? {
+              ...p,
+              shareWith: { 
+                ...p.shareWith, 
+                [userEmail]: {
+                  sharedAt: new Date().toISOString(),
+                  status: 'active'
+                }
+              },
+            }
+          : p
+      ),
+    };
+
+    await putStore(updatedStore, token);
+    return { 
+      success: true,
+      message: "分享成功"
+    };
+  } catch (error) {
+    console.error("❌ Failed to share PPT:", error);
+    return { 
+      success: false, 
+      error: "分享失败，请稍后重试" 
+    };
   }
 };
 

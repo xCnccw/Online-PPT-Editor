@@ -28,6 +28,7 @@ const loadState = () => {
 const initialState = {
     selectedKey: null,
     presentations: Array.isArray(loadState()) ? loadState() : [],
+    sharedPresentations: [], // 新增：存储分享给我的 PPT
     currentPresentationId: null,
     isEditing: false,
     isLoading: false,
@@ -173,6 +174,20 @@ const presentationSlice = createSlice({
             }
           localStorage.setItem("presentations", JSON.stringify(state.presentations));
         },
+        changeSharePPT: (state, action) => {
+            const { presentationId, shareUserEmail } = action.payload;
+            const presentation = state.presentations.find(p => p.presentationId === presentationId);
+            if (presentation) {
+                if (!presentation.shareWith) {
+                    presentation.shareWith = {};
+                }
+                presentation.shareWith[shareUserEmail] = {
+                    sharedAt: new Date().toISOString(),
+                    status: 'active'
+                };
+                localStorage.setItem('presentations', JSON.stringify(state.presentations));
+            }
+        },
     resetState: (state) => {
       state.presentations = [];
       state.selectedKey = null;
@@ -222,7 +237,8 @@ export const {
     addElementToSlide,
     updateElementInSlide,
     updateBackgroundInSlide,
-    resetState
+    resetState,
+    changeSharePPT
 } = presentationSlice.actions;
 
 export default presentationSlice.reducer;
