@@ -2,16 +2,16 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { getStore } from '../services/api.js';
 
 export const fetchPresentations = createAsyncThunk(
-  'presentation/fetchPresentations',
-  async (token, { rejectWithValue }) => {
-    try {
-      const response = await getStore(token);
-      const presentations = response?.presentations || []; 
-      return presentations;
-    } catch (error) {
-      return rejectWithValue(error.response.data);
+    'presentation/fetchPresentations',
+    async (token, { rejectWithValue }) => {
+        try {
+            const response = await getStore(token);
+            const presentations = response?.presentations || [];
+            return presentations;
+        } catch (error) {
+            return rejectWithValue(error.response.data);
+        }
     }
-  }
 );
 
 const loadState = () => {
@@ -41,6 +41,18 @@ const presentationSlice = createSlice({
     name: 'presentation',
     initialState,
     reducers: {
+        updatePresentation: (state, action) => {
+            const updatedPresentation = action.payload;
+            const index = state.presentations.findIndex(
+                p => p.presentationId === updatedPresentation.presentationId
+            );
+            if (index !== -1) {
+                // 深拷贝以确保状态完全更新
+                state.presentations[index] = JSON.parse(JSON.stringify(updatedPresentation));
+                // 更新 localStorage
+                localStorage.setItem('presentations', JSON.stringify(state.presentations));
+            }
+        },
         addSlideToPresentation: (state, action) => {
             const { presentationId, slide } = action.payload;
             const presentation = state.presentations.find(p => p.presentationId === presentationId);
@@ -151,7 +163,7 @@ const presentationSlice = createSlice({
             const { presentationId, slideId, updatedElement, elementId } = action.payload;
             const presentation = state.presentations.find(p => p.presentationId === presentationId);
             const slide = presentation?.slides.find(s => s.slideId === slideId);
-        
+
             if (slide && updatedElement === null) {
                 // delete
                 slide.content.elements = slide.content.elements.filter(el => el.id !== elementId);
@@ -161,7 +173,7 @@ const presentationSlice = createSlice({
                     el.id === updatedElement.id ? updatedElement : el
                 );
             }
-        
+
             localStorage.setItem('presentations', JSON.stringify(state.presentations));
         },
         // update background
@@ -170,9 +182,9 @@ const presentationSlice = createSlice({
             const presentation = state.presentations.find((p) => p.presentationId === presentationId);
             const slide = presentation?.slides.find((s) => s.slideId === slideId);
             if (slide) {
-              slide.background = backgroundConfig.background;
+                slide.background = backgroundConfig.background;
             }
-          localStorage.setItem("presentations", JSON.stringify(state.presentations));
+            localStorage.setItem("presentations", JSON.stringify(state.presentations));
         },
         changeSharePPT: (state, action) => {
             const { presentationId, shareUserEmail } = action.payload;
@@ -188,13 +200,13 @@ const presentationSlice = createSlice({
                 localStorage.setItem('presentations', JSON.stringify(state.presentations));
             }
         },
-    resetState: (state) => {
-      state.presentations = [];
-      state.selectedKey = null;
-      state.currentPresentationId = null;
-      state.isEditing = false;
-      state.hasFetchedData = false;
-  },
+        resetState: (state) => {
+            state.presentations = [];
+            state.selectedKey = null;
+            state.currentPresentationId = null;
+            state.isEditing = false;
+            state.hasFetchedData = false;
+        },
 
 
     },
@@ -221,6 +233,7 @@ const presentationSlice = createSlice({
 
 
 export const {
+    updatePresentation,
     addSlideToPresentation,
     changePresentationThumbnail,
     changePresentationTitle,

@@ -12,9 +12,10 @@ import SidebarDrawer from "../components/sidebar/sidebar-drawer";
 import Sidebar from "../components/sidebar/sidebar";
 import { Outlet, useLocation, useParams } from "react-router-dom";
 import { getStore, putStore } from '../services/api';
-import { addPresentation, fetchPresentations, setSelectedKey,resetState } from '../store/presentationSlice'; // Redux action to add presentation
+import { addPresentation, fetchPresentations, setSelectedKey, resetState } from '../store/presentationSlice'; // Redux action to add presentation
 import { useSelector, useDispatch, } from 'react-redux';
 import { fileToBase64 } from '../utils/base64';
+import { socketService } from '../services/socketService';
 
 export default function DashboardPage() {
     const location = useLocation();
@@ -23,6 +24,8 @@ export default function DashboardPage() {
     const { hasFetchedData } = useSelector(state => state.presentation);
     const { presentationId } = useParams();
     const token = localStorage.getItem('token');
+    // 在组件内添加状态
+    const [onlineUsers, setOnlineUsers] = useState(0);
     useEffect(() => {
         if (token && !hasFetchedData) {
             dispatch(fetchPresentations(token));
@@ -131,10 +134,34 @@ export default function DashboardPage() {
         dispatch(setSelectedKey(key));
     };
 
+    // 添加 useEffect 监听在线用户
+    useEffect(() => {
+        if (isEditPage && presentationId) {
+            socketService.connect(presentationId);
+            socketService.setCallbacks({
+                onOnlineUsers: (data) => {
+                    setOnlineUsers(data.count || 0);
+                }
+            });
+
+            return () => socketService.disconnect();
+        }
+    }, [isEditPage, presentationId]);
+
     const content = (
         <div className="relative flex flex-col flex-1 h-full p-6 w-72 bg-gradient-to-b from-default-100 via-danger-100 to-secondary-100">
             <div className="flex items-center gap-2 px-2">
-                <p className="hidden text-3xl font-bold text-transparent text-inherit bg-clip-text bg-gradient-to-r from-pink-500 to-violet-500 sm:block">Presto</p>
+                <p className="hidden text-3xl font-bold text-transparent text-inherit bg-clip-text bg-gradient-to-r from-pink-500 to-violet-500 sm:block">
+                    Presto
+                </p>
+                {isEditPage && (
+                    <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-pink-100 to-violet-100">
+                        <span className="text-lg">👥</span>
+                        <span className="text-sm font-medium bg-gradient-to-r from-pink-500 to-violet-500 bg-clip-text text-transparent">
+                            {onlineUsers} online
+                        </span>
+                    </div>
+                )}
             </div>
 
             <Spacer y={8} />
@@ -217,7 +244,17 @@ export default function DashboardPage() {
                                 width={24}
                             />
                         </Button>
-                        <p className="text-3xl font-bold text-transparent text-inherit bg-clip-text bg-gradient-to-r from-pink-500 to-violet-500">Presto</p>
+                        <p className="text-3xl font-bold text-transparent text-inherit bg-clip-text bg-gradient-to-r from-pink-500 to-violet-500">
+                            Presto
+                        </p>
+                        {isEditPage && (
+                            <div className="sm:flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-pink-100 to-violet-100">
+                                <span className="text-lg">👥 </span>
+                                <span className="text-sm font-medium bg-gradient-to-r from-pink-500 to-violet-500 bg-clip-text text-transparent">
+                                    {onlineUsers} online
+                                </span>
+                            </div>
+                        )}
                     </div>
                     <Outlet />
                 </div>

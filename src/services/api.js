@@ -1,11 +1,12 @@
 import axios from 'axios';
+import { socketService } from './socketService';
 // const API_URL ="http://localhost:5005"; // 默认本地开发环境
 const API_URL =
   typeof import.meta !== "undefined" && import.meta.env.VITE_API_URL
     ? import.meta.env.VITE_API_URL
     : typeof window !== "undefined" && window.API_URL
-    ? window.API_URL
-    : "http://localhost:5005"; // 默认本地开发环境
+      ? window.API_URL
+      : "http://localhost:5005"; // 默认本地开发环境
 
 console.log("📌 API 连接地址:", API_URL);  // 🚀 打印 API 地址，检查是否正确
 
@@ -22,10 +23,10 @@ export default apiClient;
 // register api
 export const registerUser = async (userData) => {
   try {
-    const response = await apiClient.post('/admin/auth/register', userData,{
+    const response = await apiClient.post('/admin/auth/register', userData, {
       withCredentials: true
     });
-    return response.data;  
+    return response.data;
   } catch (error) {
     console.error('Registration error:', error);
     throw error;
@@ -37,7 +38,7 @@ export const loginUser = async (userData) => {
   try {
     const response = await apiClient.post('/admin/auth/login', userData);
     localStorage.setItem('user', JSON.stringify({ email: userData.email }));
-    
+
     return response.data;
   } catch (error) {
     console.error('Login error:', error);
@@ -82,11 +83,13 @@ export const getStore = async (token) => {
         Authorization: `Bearer ${token}`,
       },
     });
-    
+
     const store = response.data.store;
     const presentations = store.presentations || [];
+    console.log(presentations);
+
     const sharedPresentations = store.sharedPresentations || [];
-    
+
     return {
       ...store,
       presentations: [...presentations, ...sharedPresentations]
@@ -115,9 +118,9 @@ export const getStore = async (token) => {
 // 添加更新共享PPT的辅助函数
 const updateSharedPresentation = async (presentationId, presentation, token) => {
   console.log('🔄 准备更新共享PPT:', { presentationId, presentation });
-  const response = await apiClient.put(`/store/shared/${presentationId}`, 
+  const response = await apiClient.put(`/store/shared/${presentationId}`,
     { presentation },
-    { headers: { Authorization: `Bearer ${token}` }}
+    { headers: { Authorization: `Bearer ${token}` } }
   );
   console.log('✅ 共享PPT更新成功:', response.data);
   return response.data;
@@ -129,11 +132,11 @@ export const putStore = async (storeData, token) => {
   try {
     const currentUserEmail = JSON.parse(localStorage.getItem('user'))?.email;
     const updatedPresentations = [...storeData.presentations];
-    
+
     // 处理共享PPT的更新
     for (let i = 0; i < updatedPresentations.length; i++) {
       const presentation = updatedPresentations[i];
-      
+
       console.log('📊 处理PPT:', {
         id: presentation.presentationId,
         owner: presentation.ownerEmail,
@@ -175,19 +178,33 @@ export const putStore = async (storeData, token) => {
 
     // 更新store
     console.log('📝 准备更新本地store');
-    const response = await apiClient.put('/store', 
-      { 
-        store: { 
-          ...storeData, 
-          presentations: updatedPresentations.filter(p => 
+    const response = await apiClient.put('/store',
+      {
+        store: {
+          ...storeData,
+          presentations: updatedPresentations.filter(p =>
             !p.ownerEmail || p.ownerEmail === currentUserEmail
           )
-        } 
+        }
       },
-      { headers: { Authorization: `Bearer ${token}` }}
+      { headers: { Authorization: `Bearer ${token}` } }
     );
     console.log('✅ 本地store更新成功');
-    
+
+    // 在成功更新后发送 WebSocket 通知
+    if (storeData.presentations) {
+      const presentationId = storeData.presentations[0]?.presentationId;
+      if (presentationId) {
+        socketService.emitUpdate({
+          type: 'content_update',
+          presentationId,
+          data: storeData.presentations[0],
+          updatedBy: currentUserEmail,
+          timestamp: new Date().toISOString()
+        });
+      }
+    }
+
     return {
       ...response.data,
       success: true
@@ -240,13 +257,13 @@ export const checkUserExists = async (email) => {
 export const updateSharePPT = async (presentationId, userEmail) => {
   try {
     const token = localStorage.getItem("token");
-    
+
     // 检查用户存在性
     const userCheck = await checkUserExists(userEmail);
     if (!userCheck.exists) {
-      return { 
-        success: false, 
-        error: "该邮箱未注册，请确认后重试" 
+      return {
+        success: false,
+        error: "该邮箱未注册，请确认后重试"
       };
     }
 
@@ -256,29 +273,29 @@ export const updateSharePPT = async (presentationId, userEmail) => {
       presentations: currentStore.presentations.map((p) =>
         p.presentationId === presentationId
           ? {
-              ...p,
-              shareWith: { 
-                ...p.shareWith, 
-                [userEmail]: {
-                  sharedAt: new Date().toISOString(),
-                  status: 'active'
-                }
-              },
-            }
+            ...p,
+            shareWith: {
+              ...p.shareWith,
+              [userEmail]: {
+                sharedAt: new Date().toISOString(),
+                status: 'active'
+              }
+            },
+          }
           : p
       ),
     };
 
     await putStore(updatedStore, token);
-    return { 
+    return {
       success: true,
       message: "分享成功"
     };
   } catch (error) {
     console.error("❌ Failed to share PPT:", error);
-    return { 
-      success: false, 
-      error: "分享失败，请稍后重试" 
+    return {
+      success: false,
+      error: "分享失败，请稍后重试"
     };
   }
 };
@@ -333,9 +350,9 @@ export const addSlideAPI = async (presentationId) => {
     const slides = currentPresentation?.slides || [];
 
     const newSlide = {
-      slideId: `slide-${Date.now()}`, 
-      content: {elements: []},
-      order: slides.length + 1 
+      slideId: `slide-${Date.now()}`,
+      content: { elements: [] },
+      order: slides.length + 1
     };
 
     const updatedStore = {
@@ -402,7 +419,7 @@ export const updateSlideOrder = async (presentationId, reorderedSlides) => {
             ...presentation,
             slides: reorderedSlides.map((slide, index) => ({
               ...slide,
-              order: index + 1, 
+              order: index + 1,
             })),
           }
           : presentation

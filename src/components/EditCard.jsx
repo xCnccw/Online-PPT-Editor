@@ -4,9 +4,9 @@ import { Icon } from "@iconify/react";
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'; // 
 import { useDisclosure, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Input, Image, Card, CardBody, CardFooter } from "@nextui-org/react";
-import { changePresentationTitle, removePresentation, changePresentationThumbnail, setSelectedKey, addSlideToPresentation, removeSlide, setRearrangeOpen, addElementToSlide, updateElementInSlide, updateBackgroundInSlide, setCurrentPresentationId,changeSharePPT } from '../store/presentationSlice';
+import { changePresentationTitle, removePresentation, changePresentationThumbnail, setSelectedKey, addSlideToPresentation, removeSlide, setRearrangeOpen, addElementToSlide, updateElementInSlide, updateBackgroundInSlide, setCurrentPresentationId, changeSharePPT } from '../store/presentationSlice';
 import { toast } from 'react-toastify';
-import { updatePresentationTitle, deletePresentationById, updatePresentationThumbnail, addSlideAPI, removeSlideAPI, addElement, updateElementAPI, updateBackgroundAPI,updateSharePPT } from "../services/api";
+import { updatePresentationTitle, deletePresentationById, updatePresentationThumbnail, addSlideAPI, removeSlideAPI, addElement, updateElementAPI, updateBackgroundAPI, updateSharePPT } from "../services/api";
 import { fileToBase64 } from '../utils/base64';
 import RearrangeSlidesModal from "./RearrangeSlidesModal.jsx";
 import { HTML5Backend } from "react-dnd-html5-backend";
@@ -16,6 +16,7 @@ import AddTextModal from './AddTextModal.jsx'
 import AddImageModal from "./AddImageModal.jsx";
 import AddVideoModal from "./AddVIdeoModal.jsx"
 import AddCodeModal from './AddCodeModal.jsx';
+import CollaborativeEditor from './CollaborativeEditor.jsx'
 import DeleteElementModal from './DeleteElementModal';
 import BackgroundPickerModal from './BackgroundPickerModal';
 // code highlight
@@ -513,347 +514,348 @@ export default function EditCard() {
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     const backend = isTouchDevice ? TouchBackend : HTML5Backend;
     return <>
-        <div className="items-center justify-between h-16 gap-2 px-4 py-2 max-w-fullflex min-h-16 rounded-medium border-small border-divider">
-            <div className="flex items-center max-w-full gap-2 ">
-                <Button
-                    onClick={backHome}
-                    color="default" variant="flat" startContent=<Icon className="text-default-600" icon="solar:backspace-line-duotone" width={24} />>
-                    <span className="hidden sm:block">Back</span>
-                </Button>
-                <h2 className="mx-5 overflow-hidden text-xl font-semibold whitespace-nowrap text-ellipsis">{presentation ? presentation.title : ''}</h2>
-                <Button aria-label="edit-title-button" isIconOnly onClick={openEditTitleModal} variant="faded" startContent=<Icon className="text-default-600" icon="solar:pen-2-line-duotone" width={24} />>
-                </Button>
-                <Button aria-label="edit-title-button" isIconOnly onClick={openShareModal} variant="flat" color="success" startContent=<Icon className="text-default-600" icon="fluent:share-24-regular" width={24} />>
-                </Button>
+        <CollaborativeEditor>
+            <div className="items-center justify-between h-16 gap-2 px-4 py-2 max-w-fullflex min-h-16 rounded-medium border-small border-divider">
+                <div className="flex items-center max-w-full gap-2 ">
+                    <Button
+                        onClick={backHome}
+                        color="default" variant="flat" startContent=<Icon className="text-default-600" icon="solar:backspace-line-duotone" width={24} />>
+                        <span className="hidden sm:block">Back</span>
+                    </Button>
+                    <h2 className="mx-5 overflow-hidden text-xl font-semibold whitespace-nowrap text-ellipsis">{presentation ? presentation.title : ''}</h2>
+                    <Button aria-label="edit-title-button" isIconOnly onClick={openEditTitleModal} variant="faded" startContent=<Icon className="text-default-600" icon="solar:pen-2-line-duotone" width={24} />>
+                    </Button>
+                    <Button aria-label="edit-title-button" isIconOnly onClick={openShareModal} variant="flat" color="success" startContent=<Icon className="text-default-600" icon="fluent:share-24-regular" width={24} />>
+                    </Button>
 
 
-                <Button onClick={openDeleteConfirmation} aria-label="Delete presentation" className="" color="danger" variant="flat" startContent=<Icon className="text-default-600" icon="solar:trash-bin-2-line-duotone" width={24} />>
-                    <span className="inline-flex items-center">
-                        <span className="hidden sm:block">Delete</span>
-                        <span className="hidden ml-1 md:block">presentation</span>
-                    </span>
-                </Button>
+                    <Button onClick={openDeleteConfirmation} aria-label="Delete presentation" className="" color="danger" variant="flat" startContent=<Icon className="text-default-600" icon="solar:trash-bin-2-line-duotone" width={24} />>
+                        <span className="inline-flex items-center">
+                            <span className="hidden sm:block">Delete</span>
+                            <span className="hidden ml-1 md:block">presentation</span>
+                        </span>
+                    </Button>
+                </div>
             </div>
-        </div>
 
-        <div className="flex items-center justify-center h-16 gap-2 px-4 py-2 max-w-fullflex min-h-16 rounded-medium border-small border-divider">
-            <div className="flex items-center max-w-full gap-2 ">
-                <Button
-                    size="sm"
-                    onClick={addSlide}
-                    color="success" variant="flat" startContent=<Icon className="text-default-600" icon="material-symbols:add-ad-outline-rounded" width={20} />>
-                    <span className="hidden sm:block">Add slide</span>
-                </Button>
-                <Button
-                    size="sm"
-                    onClick={handleDeleteSlide}
-                    color="danger" variant="flat" startContent=<Icon className="text-default-600" icon="material-symbols:contract-delete-outline-rounded" width={20} />>
-                    <span className="hidden sm:block">Delete slide</span>
-                </Button>
-                {slides.length > 1 && (
-                    <>
-                        <Button
-                            size="sm"
-                            isIconOnly
-                            variant="ghost"
-                            aria-label="Previous Slide"
-                            startContent={<Icon className="text-default-600" icon="material-symbols:arrow-left-alt-rounded" width={24} />}
-                            onClick={goToPreviousSlide}
-                            isDisabled={currentSlideIndex === 0}
-                        />
-                        <Button
-                            size="sm"
-                            isIconOnly
-                            variant="ghost"
-                            aria-label="Next Slide"
-                            startContent={<Icon className="text-default-600" icon="material-symbols:arrow-right-alt-rounded" width={24} />}
-                            onClick={goToNextSlide}
-                            isDisabled={currentSlideIndex === slides.length - 1}
-                        />
-
-                        <Button
-                            size="sm"
-                            onClick={handleRearrangeClick} className="" color="warning" variant="flat" startContent=<Icon className="text-default-600" icon="streamline:ascending-number-order" width={20} />>
-                            <span className="inline-flex items-center">
-                                <span className="hidden sm:block">Order</span>
-                                <span className="hidden ml-1 md:block">silde</span>
-                            </span>
-                        </Button>
-                    </>
-                )}
-            </div>
-        </div>
-
-        <div className="flex items-center justify-center flex-1 w-full h-full p-5 overflow-x-hidden overflow-y-hidden rounded-lg shadow-2xl">
-            <Card radius="none" shadow="none"
-                className=" w-full max-w-full max-h-full aspect-[16/9]"
-                style={{
-                    background: getSlideBackground(slides[currentSlideIndex]?.background),
-                }}
-            >
-                <CardBody className="relative flex items-center justify-center h-full p-0 overflow-x-hidden overflow-y-hidden">
-                    <div className="flex items-center justify-center object-contain w-full h-full border-2">
-                        {slides[currentSlideIndex]?.content?.elements
-                            ?.filter((element) => !element.deleted)?.length === 0 && (
-                                <p className="text-gray-500">Slide Content Area</p>
-                            )}
-                        {slides[currentSlideIndex]?.content?.elements
-                            ?.filter((element) => !element.deleted) // filter IsDeleted element
-                            .sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0))
-                            .map((element) => {
-                                switch (element.type) {
-                                    case "text":
-                                        return (
-                                            <div
-                                                key={element.id}
-                                                className="absolute overflow-hidden text-left break-words whitespace-pre-wrap"
-                                                style={{
-                                                    top: `${element.y}%`,
-                                                    left: `${element.x}%`,
-                                                    width: `${element.width}%`,
-                                                    height: `${element.height}%`,
-                                                    fontSize: `${element.fontSize}em`,
-                                                    fontFamily: element.fontFamily || "Arial",
-                                                    color: element.color,
-                                                    border: element.id === selectedElementId ? "2px solid #ccc" : "1px solid #eaeaea",
-                                                }}
-                                                onClick={() => setSelectedElementId(element.id)}
-                                                onDoubleClick={() => handleEditText(element)}
-                                                onContextMenu={(e) => {
-                                                    e.preventDefault();
-                                                    handleRightClick(element.id);
-                                                }}
-                                            >
-                                                {element.text}
-                                            </div>
-                                        );
-
-                                    case "image":
-                                        return (
-                                            <img
-                                                key={element.id}
-                                                src={element.url}
-                                                alt={element.alt}
-                                                className="absolute object-cover"
-                                                style={{
-                                                    top: `${element.y}%`,
-                                                    left: `${element.x}%`,
-                                                    width: `${element.width}%`,
-                                                    height: `${element.height}%`,
-                                                    border: element.id === selectedElementId ? "2px solid #ccc" : "1px solid #eaeaea",
-                                                }}
-                                                onClick={() => setSelectedElementId(element.id)}
-                                                onDoubleClick={() => handleEditImage(element)}
-                                                onContextMenu={(e) => {
-                                                    e.preventDefault();
-                                                    handleRightClick(element.id);
-                                                }}
-                                            />
-                                        );
-                                    case "video":
-                                        return (
-                                            <div
-                                                key={element.id}
-                                                className={`absolute cursor-pointer ${element.id === selectedElementId ? 'border-4 border-blue-500' : 'border-4 border-gray-300'}`}
-                                                style={{
-                                                    top: `${element.y}%`,
-                                                    left: `${element.x}%`,
-                                                    width: `${element.width}%`,
-                                                    height: `${element.height}%`,
-                                                }}
-
-                                                onDoubleClick={() => handleEditVideo(element)}
-                                                onContextMenu={(e) => {
-                                                    e.preventDefault();
-                                                    handleRightClick(element.id);
-                                                }}
-                                            >
-                                                <iframe
-                                                    id={`youtube-player-${element.id}`}
-                                                    src={`${element.url}${element.autoplay ? '?autoplay=1&enablejsapi=1' : '?enablejsapi=1'}`}
-                                                    className="w-full h-full"
-                                                    frameBorder="0"
-                                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                                    allowFullScreen
-                                                    onLoad={() => initializePlayer(element.id)}
-                                                    onClick={(e) => e.stopPropagation()}
-                                                />
-
-                                            </div>
-                                        );
-                                    case "code":
-                                        const elementCopy = { ...element }; // shallow copy
-                                        const result = hljs.highlightAuto(elementCopy.code || '');
-                                        elementCopy.language = result.language || 'plaintext';
-
-                                        return (
-                                            <div
-                                                key={elementCopy.id}
-                                                className={`overflow-auto p-1.5 bg-gray-100 absolute ${elementCopy.id === selectedElementId ? 'border-2 solid #ccc' : 'border-1 border-gray-300'} cursor-pointer`}
-                                                style={{
-                                                    top: `${elementCopy.y}%`,
-                                                    left: `${elementCopy.x}%`,
-                                                    width: `${elementCopy.width}%`,
-                                                    height: `${elementCopy.height}%`,
-                                                }}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setSelectedElementId(elementCopy.id);
-                                                }}
-                                                onDoubleClick={() => handleEditCode(elementCopy)}
-                                                onContextMenu={(e) => {
-                                                    e.preventDefault();
-                                                    handleRightClick(element.id);
-                                                }}
-                                            >
-                                                {/* Detected Language */}
-                                                <p className="mb-2 text-sm text-gray-600">Detected Language: {elementCopy.language}</p>
-
-                                                {/* highlight code */}
-                                                <SyntaxHighlighter language={elementCopy.language} style={atomDark} showLineNumbers>
-                                                    {elementCopy.code}
-                                                </SyntaxHighlighter>
-                                            </div>
-                                        );
-
-
-
-                                    default:
-                                        return null;
-                                }
-                            })}
-                    </div>
-
-                    {/* Slide Number */}
-                    <div
-                        aria-label="Slide Number"
-                        className="w-[4vw] h-[4vw] text-[1.5vw] absolute bottom-[1%] left-[1%] flex items-center justify-center bg-black/40 rounded text-white"
-                    >
-                        {presentation?.slides.length > 1 ? `${currentSlideIndex + 1}` : "1"}
-                    </div>
-                </CardBody>
-            </Card>
-
-
-        </div>
-
-
-
-
-        <Modal backdrop={backdrop} isOpen={isSecondModalOpen} onClose={closeSecondModal}>
-            <ModalContent>
-                {(onClose) => (
-                    <>
-                        <ModalHeader className="flex flex-col gap-1">{modalContent?.title}</ModalHeader>
-                        <ModalBody>
-                            {typeof modalContent?.body === "string" ? (
-                                <p>{modalContent.body}</p>
-                            ) : (
-                                modalContent.body
-                            )}
-                        </ModalBody>
-                        <ModalFooter>
-                            <Button color="default" variant="ghost" onPress={onClose}>
-                                {modalContent?.cancelButtonLabel || "Cancel"}
-                            </Button>
-                            <Button color="danger" onPress={handleConfirm}>
-                                {modalContent?.confirmButtonLabel || "Confirm"}
-                            </Button>
-                        </ModalFooter>
-                    </>
-                )}
-            </ModalContent>
-        </Modal>
-
-        <Modal isOpen={isThirdModalOpen} onClose={closeThirdModal}>
-            <ModalContent>
-                {(onClose) => (
-                    <>
-                        <ModalBody>
-                            <h3>Upload Thumbnail Image</h3>
-                            <Input
-                                type="file"
-                                accept="image/*"
-                                onChange={handleImageUpload}
-                            />
-                            {selectedImage && (
-                                <img
-                                    src={selectedImage}
-                                    alt="Thumbnail Preview"
-                                    className="max-w-full mt-5"
-                                />
-                            )}
-                        </ModalBody>
-                        <ModalFooter>
-                            <Button color="default" variant="ghost" onPress={closeThirdModal}>Cancel</Button>
+            <div className="flex items-center justify-center h-16 gap-2 px-4 py-2 max-w-fullflex min-h-16 rounded-medium border-small border-divider">
+                <div className="flex items-center max-w-full gap-2 ">
+                    <Button
+                        size="sm"
+                        onClick={addSlide}
+                        color="success" variant="flat" startContent=<Icon className="text-default-600" icon="material-symbols:add-ad-outline-rounded" width={20} />>
+                        <span className="hidden sm:block">Add slide</span>
+                    </Button>
+                    <Button
+                        size="sm"
+                        onClick={handleDeleteSlide}
+                        color="danger" variant="flat" startContent=<Icon className="text-default-600" icon="material-symbols:contract-delete-outline-rounded" width={20} />>
+                        <span className="hidden sm:block">Delete slide</span>
+                    </Button>
+                    {slides.length > 1 && (
+                        <>
                             <Button
-                                color="danger"
-                                onPress={handleSaveThumbnail}
-                            >
-                                Save
+                                size="sm"
+                                isIconOnly
+                                variant="ghost"
+                                aria-label="Previous Slide"
+                                startContent={<Icon className="text-default-600" icon="material-symbols:arrow-left-alt-rounded" width={24} />}
+                                onClick={goToPreviousSlide}
+                                isDisabled={currentSlideIndex === 0}
+                            />
+                            <Button
+                                size="sm"
+                                isIconOnly
+                                variant="ghost"
+                                aria-label="Next Slide"
+                                startContent={<Icon className="text-default-600" icon="material-symbols:arrow-right-alt-rounded" width={24} />}
+                                onClick={goToNextSlide}
+                                isDisabled={currentSlideIndex === slides.length - 1}
+                            />
+
+                            <Button
+                                size="sm"
+                                onClick={handleRearrangeClick} className="" color="warning" variant="flat" startContent=<Icon className="text-default-600" icon="streamline:ascending-number-order" width={20} />>
+                                <span className="inline-flex items-center">
+                                    <span className="hidden sm:block">Order</span>
+                                    <span className="hidden ml-1 md:block">silde</span>
+                                </span>
                             </Button>
-                        </ModalFooter>
+                        </>
+                    )}
+                </div>
+            </div>
 
-                    </>
-                )}
-            </ModalContent>
-        </Modal>
+            <div className="flex items-center justify-center flex-1 w-full h-full p-5 overflow-x-hidden overflow-y-hidden rounded-lg shadow-2xl">
+                <Card radius="none" shadow="none"
+                    className=" w-full max-w-full max-h-full aspect-[16/9]"
+                    style={{
+                        background: getSlideBackground(slides[currentSlideIndex]?.background),
+                    }}
+                >
+                    <CardBody className="relative flex items-center justify-center h-full p-0 overflow-x-hidden overflow-y-hidden">
+                        <div className="flex items-center justify-center object-contain w-full h-full border-2">
+                            {slides[currentSlideIndex]?.content?.elements
+                                ?.filter((element) => !element.deleted)?.length === 0 && (
+                                    <p className="text-gray-500">Slide Content Area</p>
+                                )}
+                            {slides[currentSlideIndex]?.content?.elements
+                                ?.filter((element) => !element.deleted) // filter IsDeleted element
+                                .sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0))
+                                .map((element) => {
+                                    switch (element.type) {
+                                        case "text":
+                                            return (
+                                                <div
+                                                    key={element.id}
+                                                    className="absolute overflow-hidden text-left break-words whitespace-pre-wrap"
+                                                    style={{
+                                                        top: `${element.y}%`,
+                                                        left: `${element.x}%`,
+                                                        width: `${element.width}%`,
+                                                        height: `${element.height}%`,
+                                                        fontSize: `${element.fontSize}em`,
+                                                        fontFamily: element.fontFamily || "Arial",
+                                                        color: element.color,
+                                                        border: element.id === selectedElementId ? "2px solid #ccc" : "1px solid #eaeaea",
+                                                    }}
+                                                    onClick={() => setSelectedElementId(element.id)}
+                                                    onDoubleClick={() => handleEditText(element)}
+                                                    onContextMenu={(e) => {
+                                                        e.preventDefault();
+                                                        handleRightClick(element.id);
+                                                    }}
+                                                >
+                                                    {element.text}
+                                                </div>
+                                            );
+
+                                        case "image":
+                                            return (
+                                                <img
+                                                    key={element.id}
+                                                    src={element.url}
+                                                    alt={element.alt}
+                                                    className="absolute object-cover"
+                                                    style={{
+                                                        top: `${element.y}%`,
+                                                        left: `${element.x}%`,
+                                                        width: `${element.width}%`,
+                                                        height: `${element.height}%`,
+                                                        border: element.id === selectedElementId ? "2px solid #ccc" : "1px solid #eaeaea",
+                                                    }}
+                                                    onClick={() => setSelectedElementId(element.id)}
+                                                    onDoubleClick={() => handleEditImage(element)}
+                                                    onContextMenu={(e) => {
+                                                        e.preventDefault();
+                                                        handleRightClick(element.id);
+                                                    }}
+                                                />
+                                            );
+                                        case "video":
+                                            return (
+                                                <div
+                                                    key={element.id}
+                                                    className={`absolute cursor-pointer ${element.id === selectedElementId ? 'border-4 border-blue-500' : 'border-4 border-gray-300'}`}
+                                                    style={{
+                                                        top: `${element.y}%`,
+                                                        left: `${element.x}%`,
+                                                        width: `${element.width}%`,
+                                                        height: `${element.height}%`,
+                                                    }}
+
+                                                    onDoubleClick={() => handleEditVideo(element)}
+                                                    onContextMenu={(e) => {
+                                                        e.preventDefault();
+                                                        handleRightClick(element.id);
+                                                    }}
+                                                >
+                                                    <iframe
+                                                        id={`youtube-player-${element.id}`}
+                                                        src={`${element.url}${element.autoplay ? '?autoplay=1&enablejsapi=1' : '?enablejsapi=1'}`}
+                                                        className="w-full h-full"
+                                                        frameBorder="0"
+                                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                        allowFullScreen
+                                                        onLoad={() => initializePlayer(element.id)}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    />
+
+                                                </div>
+                                            );
+                                        case "code":
+                                            const elementCopy = { ...element }; // shallow copy
+                                            const result = hljs.highlightAuto(elementCopy.code || '');
+                                            elementCopy.language = result.language || 'plaintext';
+
+                                            return (
+                                                <div
+                                                    key={elementCopy.id}
+                                                    className={`overflow-auto p-1.5 bg-gray-100 absolute ${elementCopy.id === selectedElementId ? 'border-2 solid #ccc' : 'border-1 border-gray-300'} cursor-pointer`}
+                                                    style={{
+                                                        top: `${elementCopy.y}%`,
+                                                        left: `${elementCopy.x}%`,
+                                                        width: `${elementCopy.width}%`,
+                                                        height: `${elementCopy.height}%`,
+                                                    }}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedElementId(elementCopy.id);
+                                                    }}
+                                                    onDoubleClick={() => handleEditCode(elementCopy)}
+                                                    onContextMenu={(e) => {
+                                                        e.preventDefault();
+                                                        handleRightClick(element.id);
+                                                    }}
+                                                >
+                                                    {/* Detected Language */}
+                                                    <p className="mb-2 text-sm text-gray-600">Detected Language: {elementCopy.language}</p>
+
+                                                    {/* highlight code */}
+                                                    <SyntaxHighlighter language={elementCopy.language} style={atomDark} showLineNumbers>
+                                                        {elementCopy.code}
+                                                    </SyntaxHighlighter>
+                                                </div>
+                                            );
 
 
-        {/* render RearrangeSlidesModal */}
-        {isRearrangeOpen && (
 
-            <DndProvider backend={backend} options={isTouchDevice ? { enableMouseEvents: true } : {}}>
-                <RearrangeSlidesModal
-                    presentationId={presentationId}
-                    isOpen={isRearrangeOpen}
-                    onClose={handleCloseModal}
-                />
-            </DndProvider>
-        )}
-        <AddTextModal
-            isOpen={isTextModalOpen}
-            slides={slides}
-            currentSlideIndex={currentSlideIndex}
-            onClose={() => setIsTextModalOpen(false)}
-            element={selectedElement}
-            onSave={handleSaveElement}
-        />
+                                        default:
+                                            return null;
+                                    }
+                                })}
+                        </div>
 
-        <AddImageModal
-            isOpen={isImageModalOpen}
-            onClose={() => setIsImageModalOpen(false)}
-            element={selectedElement}
-            onSave={handleSaveElement}
-        />
+                        {/* Slide Number */}
+                        <div
+                            aria-label="Slide Number"
+                            className="w-[4vw] h-[4vw] text-[1.5vw] absolute bottom-[1%] left-[1%] flex items-center justify-center bg-black/40 rounded text-white"
+                        >
+                            {presentation?.slides.length > 1 ? `${currentSlideIndex + 1}` : "1"}
+                        </div>
+                    </CardBody>
+                </Card>
 
-        <AddVideoModal
-            isOpen={isVideoModalOpen}
-            onClose={() => setIsVideoModalOpen(false)}
-            element={selectedElement}
-            onSave={handleSaveElement}
-        />
 
-        <AddCodeModal
-            isOpen={isCodeModalOpen}
-            onClose={() => setIsCodeModalOpen(false)}
-            element={selectedElement}
-            onSave={handleSaveElement}
-        />
+            </div>
 
-        <DeleteElementModal
-            isOpen={isDeleteModalOpen}
-            onClose={() => setIsDeleteModalOpen(false)}
-            onDelete={handleDeleteElement}
-        />
 
-        <BackgroundPickerModal
-            isOpen={isBackgroundModalOpen}
-            onClose={() => setIsBackgroundModalOpen(false)}
-            onSave={handleSaveBackground}
-            slides={slides}
-            currentSlideIndex={currentSlideIndex}
-        />
 
+
+            <Modal backdrop={backdrop} isOpen={isSecondModalOpen} onClose={closeSecondModal}>
+                <ModalContent>
+                    {(onClose) => (
+                        <>
+                            <ModalHeader className="flex flex-col gap-1">{modalContent?.title}</ModalHeader>
+                            <ModalBody>
+                                {typeof modalContent?.body === "string" ? (
+                                    <p>{modalContent.body}</p>
+                                ) : (
+                                    modalContent.body
+                                )}
+                            </ModalBody>
+                            <ModalFooter>
+                                <Button color="default" variant="ghost" onPress={onClose}>
+                                    {modalContent?.cancelButtonLabel || "Cancel"}
+                                </Button>
+                                <Button color="danger" onPress={handleConfirm}>
+                                    {modalContent?.confirmButtonLabel || "Confirm"}
+                                </Button>
+                            </ModalFooter>
+                        </>
+                    )}
+                </ModalContent>
+            </Modal>
+
+            <Modal isOpen={isThirdModalOpen} onClose={closeThirdModal}>
+                <ModalContent>
+                    {(onClose) => (
+                        <>
+                            <ModalBody>
+                                <h3>Upload Thumbnail Image</h3>
+                                <Input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleImageUpload}
+                                />
+                                {selectedImage && (
+                                    <img
+                                        src={selectedImage}
+                                        alt="Thumbnail Preview"
+                                        className="max-w-full mt-5"
+                                    />
+                                )}
+                            </ModalBody>
+                            <ModalFooter>
+                                <Button color="default" variant="ghost" onPress={closeThirdModal}>Cancel</Button>
+                                <Button
+                                    color="danger"
+                                    onPress={handleSaveThumbnail}
+                                >
+                                    Save
+                                </Button>
+                            </ModalFooter>
+
+                        </>
+                    )}
+                </ModalContent>
+            </Modal>
+
+
+            {/* render RearrangeSlidesModal */}
+            {isRearrangeOpen && (
+
+                <DndProvider backend={backend} options={isTouchDevice ? { enableMouseEvents: true } : {}}>
+                    <RearrangeSlidesModal
+                        presentationId={presentationId}
+                        isOpen={isRearrangeOpen}
+                        onClose={handleCloseModal}
+                    />
+                </DndProvider>
+            )}
+            <AddTextModal
+                isOpen={isTextModalOpen}
+                slides={slides}
+                currentSlideIndex={currentSlideIndex}
+                onClose={() => setIsTextModalOpen(false)}
+                element={selectedElement}
+                onSave={handleSaveElement}
+            />
+
+            <AddImageModal
+                isOpen={isImageModalOpen}
+                onClose={() => setIsImageModalOpen(false)}
+                element={selectedElement}
+                onSave={handleSaveElement}
+            />
+
+            <AddVideoModal
+                isOpen={isVideoModalOpen}
+                onClose={() => setIsVideoModalOpen(false)}
+                element={selectedElement}
+                onSave={handleSaveElement}
+            />
+
+            <AddCodeModal
+                isOpen={isCodeModalOpen}
+                onClose={() => setIsCodeModalOpen(false)}
+                element={selectedElement}
+                onSave={handleSaveElement}
+            />
+
+            <DeleteElementModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onDelete={handleDeleteElement}
+            />
+
+            <BackgroundPickerModal
+                isOpen={isBackgroundModalOpen}
+                onClose={() => setIsBackgroundModalOpen(false)}
+                onSave={handleSaveBackground}
+                slides={slides}
+                currentSlideIndex={currentSlideIndex}
+            />
+        </CollaborativeEditor>
     </>
 }
